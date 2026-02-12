@@ -42,5 +42,6 @@ A little project heavily inspired by garmin varia capabilities, and expanding on
 - compile the radarchipemu with wokwi-cli
 - Start wokwi simulator
 
-TODO: ADD IMAGE OF THE SIM UI WITH IT RUNNING
+<img width="730" height="539" alt="screenshot-2026-02-12_20-32-44" src="https://github.com/user-attachments/assets/6ff1c2da-52d7-483b-b67d-fe0fef76cb8a" />
+
 
