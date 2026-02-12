@@ -90,6 +90,23 @@ public:
             request->send(200, "text/plain", "Config Queued for Main Loop");
         });
 
+        _server.on("/profile", HTTP_GET, [](AsyncWebServerRequest *request){
+            if (request->hasParam("side")) {
+                String side = request->getParam("side")->value();
+                currentTrafficSide = (side == "left") ? LEFT_HAND_DRIVE : RIGHT_HAND_DRIVE;
+            }
+
+            if (request->hasParam("mode")) {
+                String mode = request->getParam("mode")->value();
+                if (mode == "city") {
+                    nextRange = 30; nextMinSpd = 10; nextSens = 3;
+                } else if (mode == "highway") {
+                    nextRange = 100; nextMinSpd = 5; nextSens = 8;
+                }
+                pendingConfigChange = true;
+            }
+            request->send(200, "text/plain", "Profile Applied");
+        });
 
 
         _server.begin();
