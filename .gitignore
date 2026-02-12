@@ -4,6 +4,8 @@
 .vscode/launch.json
 .vscode/ipch
 
+wokwi.vcd
+
 # Python & UV
 __pycache__/
 *.py[cod]

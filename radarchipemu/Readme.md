@@ -5,10 +5,11 @@ A Wokwi-based emulator for the HLK-LD2451 millimeter-wave radar sensor.
 
 ## Features
 
-- **Traffic Wave Simulation**: Automatically generates "waves" of 1 to 5 cars at a time to simulate real road conditions.
-- **Simultaneous Tracking**: Full implementation of the HLK-LD2451 multi-target protocol (tracks up to 5 targets in a single frame).
-- **Physics Engine**: Realistic distance-over-time calculation based on randomized vehicle speeds (40km/h - 120km/h).
+- **Traffic Wave Simulation**: Generates "waves" of 1–5 vehicles with randomized speeds.
+- **Simultaneous Tracking**: iplementation of the HLK-LD2451 multi-target protocol (tracks up to 5 targets in a single frame).
+- **Overtaking**: Vehicles maintain a "convoy" queue until they reach, where they veer laterally to simulate a passing maneuver.
 - **Binary Protocol Accuracy**: Mocks the 10Hz hardware reporting cycle using official 24GHz FMCW frames.
+- **Signal Jitter**: Includes simulated sensor noise (+-1) 
 - **Configurable Registers**: Supports virtual hardware settings for range, sensitivity, and direction filtering.
 
 
@@ -17,20 +18,18 @@ A Wokwi-based emulator for the HLK-LD2451 millimeter-wave radar sensor.
 | Register | Range | Default | Description |
 |----------|-------|---------|-------------|
 | `direction_filter` | 0-2 | 0 | 0=Both, 1=Approach, 2=Away |
-| `max_distance` | 10-100m | 100 | Maximum detection range |
+| `max_distance` | 10-100m | 100 | Maximum detection range / Spawn threshold |
 | `min_speed` | 1-20 km/h | 5 | Minimum speed threshold |
 | `sensitivity` | 1-15 | 5 | Affects re-trigger delay (Lower = Faster) |
 
-## UART Protocol
+## Binary Protocol Specification
 
-**Configuration Frame (ESP32 -> Radar)**:
-- **Header**: `FD FC FB FA`
-- **Command Word**: Offset 6 (e.g., `FF 00` to Enable Config)
-- **Footer**: `04 03 02 01`
-
-**Reporting Frame (Radar -> ESP32)**:
-- **Header**: `F4 F3 F2 F1`
-- **Payload**: Target Count, Distance, Speed, Direction, SNR
-- **Footer**: `F8 F7 F6 F5`
-
-### TODO: Maybe implement driver breaking / slowing down on approach for a more realistic simulation (probably not needed given the current goals)
+- **Header**: `0xF4 0xF3 0xF2 0xF1`
+- **Payload lenght**: 2 bytes (little endian)
+- **Target data**: 5-byte blocks per target:
+    - *byte 0*: Angle (0-255, 128 is center)
+    - *byte 1*: Distance (0-100m)
+    - *byte 2*: Direction (0x01: Approaching)
+    - *byte 3*: Speed (km/h)
+    - *byte 4*: SNR(0-255)
+- **Footer**: `0xF8 0xF7 0xF6 0xF5`
