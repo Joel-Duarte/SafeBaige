@@ -93,7 +93,7 @@ static void on_timer(void *user_data) {
       if (!chip->targets[i].active) {
         chip->targets[i].active = true;
         chip->targets[i].distance = (float)chip->max_distance + (spawned * 10.0f);
-        float speed_kmh = (float)(60 + (rand() % 40)); // 60-100 km/h
+        float speed_kmh = (float)(35 + (rand() % 45)); // Random speed between35 and 80 km/h
         chip->targets[i].speed_mps = speed_kmh / 3.6f;
         chip->targets[i].angle = 128.0f; // Start directly behind (0 degrees)
         spawned++;
@@ -140,8 +140,13 @@ static void on_timer(void *user_data) {
         continue;
       }
 
+      // noise logic
+      float jitter = ((rand() % 200) - 100) / 100.0f; // Random -1.0 to +1.0 meters
+      float noisyDist = chip->targets[i].distance + jitter;
+
+
       frame[idx++] = (uint8_t)chip->targets[i].angle;
-      frame[idx++] = (uint8_t)chip->targets[i].distance; 
+      frame[idx++] = (uint8_t)noisyDist; 
       frame[idx++] = 0x01; 
       frame[idx++] = (uint8_t)(chip->targets[i].speed_mps * 3.6f); 
       frame[idx++] = (uint8_t)(255 - (chip->targets[i].distance * 2)); 

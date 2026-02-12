@@ -3,6 +3,10 @@
 #include "include/SafetySystems.h"
 #include "include/DisplayModule.h"
 #include "include/NetworkManager.h"
+#include "include/FilterModule.h" 
+
+SignalFilter radarFilter;
+
 
 RadarTarget activeTargets[5];
 SafetySystems safety;
@@ -66,30 +70,29 @@ void loop() {
         
         uint8_t closest = 100;
         for(int i = 0; i < count; i++) {
-            if(activeTargets[i].distance < closest) closest = activeTargets[i].distance;
+            activeTargets[i].distance = radarFilter.smooth(i, activeTargets[i].distance);
         }
 
         if (yoloVetoActive && abs(closest - lastVetoDistance) > 5) {
             yoloVetoActive = false; 
             Serial.println("YOLO: New target detected. Resetting Veto.");
         }
-        ui.render(count, activeTargets, phoneAttached, cameraRecording);
-        
-        // Pass the 3rd argument: yoloVetoActive
-        safety.update(true, closest, yoloVetoActive); 
+
+        ui.render(count, activeTargets, network.isConnected(), safety.isRecording());
+        safety.update(true, closest, yoloVetoActive);
     } 
     else {
-        if (millis() - lastCarSeenTime > DATA_PERSIST_MS) {
-            globalTargetCount = 0;
-            
-            // Pass the 3rd argument: yoloVetoActive
-            safety.update(false, 100, yoloVetoActive); 
-            
-            if (!alreadyClear) {
-                ui.showClear(phoneAttached);
-                alreadyClear = true;
-                yoloVetoActive = false; // Reset veto when road is clear
-            }
-        }
+      if (millis() - lastCarSeenTime > DATA_PERSIST_MS) {
+          globalTargetCount = 0;
+          
+          safety.update(false, 100, yoloVetoActive); 
+          
+          if (!alreadyClear) {
+              ui.showClear(phoneAttached);
+              alreadyClear = true;
+              yoloVetoActive = false; // Reset veto when road is clear
+          }
+          for(int i=0; i<5; i++) radarFilter.reset(i);
+      }
     }
 }
