@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "author": "SafeBaige Team",
-  "title": "SafeBaige - mmWave Radar Car Detection",
-  "description": "ESP32 receiving LD2451 radar data via Serial2 (pins 25 & 27)",
+  "author": "JoelDuarte",
+  "title": "SafeBaige - IoT Radar",
+  "description": "Esp32 IoT Radar with YOLO object detection",
   "editor": "wokwi",
   "parts": [
     {
@@ -14,13 +14,23 @@
         "name": "ESP32 DevKit V4"
       }
     },
-    { "type": "chip-hlk-ld2451", "id": "radar1", "top": -100, "left": 100 }
+    { "type": "chip-hlk-ld2451", "id": "radar1", "top": -100, "left": 100 },
+    { "type": "wokwi-led", "id": "cam_led", "top": -100, "left": -100, "attrs": { "color": "red", "label": "CAMERA/LIGHT" } },
+    { "type": "wokwi-buzzer", "id": "alert_buzzer", "top": 100, "left": -100, "attrs": { "label": "PROXIMITY ALARM" } },
+    { "type": "wokwi-ssd1306", "id": "oled", "top": 100, "left": 200, "attrs": {} }
   ],
   "connections": [
     ["esp32:TX", "$serialMonitor:RX", "", []],
     ["esp32:RX", "$serialMonitor:TX", "", []],
     [ "radar1:TX", "esp32:25", "green", [] ],
     [ "radar1:RX", "esp32:27", "blue", [] ],
-    [ "radar1:GND", "esp32:GND", "black", [] ]
+    [ "esp32:GND", "cam_led:C", "black", [] ],
+    [ "esp32:23", "cam_led:A", "red", [] ], 
+    [ "esp32:GND", "alert_buzzer:1", "black", [] ],
+    [ "esp32:18", "alert_buzzer:2", "orange", [] ],
+    [ "esp32:GND", "oled:GND", "black", [ "v0" ]  ],
+    [ "esp32:3V3", "oled:VCC", "red",[ "v0" ]  ],
+    [ "esp32:21", "oled:SDA", "orange",[ "v0" ]  ],
+    [ "esp32:22", "oled:SCL", "yellow",[ "v0" ]  ]
   ]
 }

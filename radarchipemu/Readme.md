@@ -5,7 +5,7 @@ A Wokwi-based emulator for the HLK-LD2451 millimeter-wave radar sensor.
 
 ## Features
 
-- **Traffic Wave Simulation**: Automatically generates "waves" of 1 to 3 cars at a time to simulate real road conditions.
+- **Traffic Wave Simulation**: Automatically generates "waves" of 1 to 5 cars at a time to simulate real road conditions.
 - **Simultaneous Tracking**: Full implementation of the HLK-LD2451 multi-target protocol (tracks up to 5 targets in a single frame).
 - **Physics Engine**: Realistic distance-over-time calculation based on randomized vehicle speeds (40km/h - 120km/h).
 - **Binary Protocol Accuracy**: Mocks the 10Hz hardware reporting cycle using official 24GHz FMCW frames.
@@ -33,3 +33,4 @@ A Wokwi-based emulator for the HLK-LD2451 millimeter-wave radar sensor.
 - **Payload**: Target Count, Distance, Speed, Direction, SNR
 - **Footer**: `F8 F7 F6 F5`
 
+### TODO: Maybe implement driver breaking / slowing down on approach for a more realistic simulation (probably not needed given the current goals)
