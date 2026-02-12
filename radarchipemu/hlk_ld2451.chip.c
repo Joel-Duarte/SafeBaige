@@ -132,6 +132,15 @@ static void on_timer(void *user_data) {
 void chip_init(void) {
   chip_state_t *chip = malloc(sizeof(chip_state_t));
 
+  const uart_config_t uart_config = {
+    .user_data = chip,
+    .rx = pin_init("RX", INPUT_PULLUP),
+    .tx = pin_init("TX", OUTPUT), 
+    .baud_rate = 115200,
+    .rx_data = on_uart_data,
+  };
+  chip->uart = uart_init(&uart_config);
+
   // Default Factory Settings (matches real HLK-LD2451)
   chip->config_enabled = false;
   chip->direction_filter = 1; // Default: approach only

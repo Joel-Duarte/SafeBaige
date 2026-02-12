@@ -21,7 +21,6 @@
     ["esp32:RX", "$serialMonitor:TX", "", []],
     [ "radar1:TX", "esp32:25", "green", [] ],
     [ "radar1:RX", "esp32:27", "blue", [] ],
-    [ "radar1:GND", "esp32:GND", "black", [] ],
-    [ "radar1:VCC", "esp32:3V3", "red", [] ]
+    [ "radar1:GND", "esp32:GND", "black", [] ]
   ]
 }
