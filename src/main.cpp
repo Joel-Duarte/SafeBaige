@@ -18,9 +18,9 @@ void setup() {
 }
 
 void loop() {
-  // 1. DATA ACQUISITION
+  // 1. Wait for a full frame (Min 12 bytes for 1 target)
   if (Serial2.available() >= 12) {
-    if (Serial2.read() == 0xF4) { // Look for start of Header
+    if (Serial2.read() == 0xF4) { // Header Start
       uint8_t h[3];
       Serial2.readBytes(h, 3); // Read F3 F2 F1
 
@@ -31,39 +31,32 @@ void loop() {
         uint8_t payload[dataLen];
         Serial2.readBytes(payload, dataLen);
 
-        uint8_t footer[4];
-        Serial2.readBytes(footer, 4); // Read F8 F7 F6 F5
+        uint8_t trailer[4];
+        Serial2.readBytes(trailer, 4);
 
-        // 2. DATA PARSING
-        uint8_t targetCount = payload[0];
-        if (targetCount > 0) {
-          // Byte 1: Angle, Byte 2: Distance, Byte 3: Direction, Byte 4: Speed, Byte 5: SNR
-          uint8_t distance = payload[3]; 
-          uint8_t speed    = payload[5];
-          uint8_t snr      = payload[6];
-          bool approaching = (payload[4] == 0x01);
+        // --- FORMATTED OUTPUT ---
+        int targetCount = payload[0];
+        
+        // Create a single string buffer to prevent broken lines
+        String output = "\n[RADAR] Targets: " + String(targetCount) + " | ";
 
-          lastRadarUpdate = millis(); // Refresh timeout timer
+        for (int i = 0; i < targetCount; i++) {
+          int base = 2 + (i * 5);
+          uint8_t dist  = payload[base + 1];
+          uint8_t speed = payload[base + 3];
 
-          // 3. IOT OUTPUT
-          Serial.print("TARGET: ");
-          Serial.print(distance); Serial.print("m | ");
-          Serial.print(speed); Serial.print("km/h | ");
-          Serial.print("SNR: "); Serial.print(snr);
-          Serial.println(approaching ? " [CLOSING]" : " [PASSING]");
+          output += "C" + String(i + 1) + ": " + String(dist) + "m (" + String(speed) + "km/h)";
+          if (i < targetCount - 1) output += " | ";
+        }
 
-          // Proximity Alert Logic
-          if (distance < 15 && approaching) {
-            Serial.println(">> ALERT: VEHICLE IN 15m RANGE <<");
-          }
+        // Send the entire line at once
+        Serial.println(output);
+
+        // Optional: High Priority Alert on a new line
+        if (targetCount > 0 && payload[3] < 15) {
+             Serial.println(">>> ! PROXIMITY ALERT ! <<<");
         }
       }
     }
-  }
-
-  // 4. TIMEOUT LOGIC (Road Status)
-  if (millis() - lastRadarUpdate > RADAR_TIMEOUT_MS && lastRadarUpdate != 0) {
-    Serial.println("STATUS: Road Clear (No Targets)");
-    lastRadarUpdate = 0; // Reset so it doesn't spam "Clear"
   }
 }

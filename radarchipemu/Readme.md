@@ -5,11 +5,12 @@ A Wokwi-based emulator for the HLK-LD2451 millimeter-wave radar sensor.
 
 ## Features
 
-- **Radar Simulation**: Simulates approaching and receding vehicles with realistic distance and speed
-- **Hardware Registers**: Configurable distance range, speed thresholds, and sensitivity
-- **Direction Filtering**: Filter for approaching, receding, or bidirectional motion detection
-- **SNR Calculation**: Signal-to-noise ratio based on distance and sensitivity settings
-- **UART Interface**: Serial communication for configuration and data output
+- **Traffic Wave Simulation**: Automatically generates "waves" of 1 to 3 cars at a time to simulate real road conditions.
+- **Simultaneous Tracking**: Full implementation of the HLK-LD2451 multi-target protocol (tracks up to 5 targets in a single frame).
+- **Physics Engine**: Realistic distance-over-time calculation based on randomized vehicle speeds (40km/h - 120km/h).
+- **Binary Protocol Accuracy**: Mocks the 10Hz hardware reporting cycle using official 24GHz FMCW frames.
+- **Configurable Registers**: Supports virtual hardware settings for range, sensitivity, and direction filtering.
+
 
 ## Configuration Registers
 

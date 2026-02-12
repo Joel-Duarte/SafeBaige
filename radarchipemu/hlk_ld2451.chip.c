@@ -3,20 +3,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+#define MAX_TARGETS 5 
+typedef struct {
+  float distance;
+  float speed_mps;
+  bool active;
+} target_t;
 typedef struct {
   uart_dev_t uart;
-  float current_dist;
-  float speed_mps;
-  bool car_active;
-  uint64_t next_event_time_ns;
+  target_t targets[MAX_TARGETS];
+  uint64_t next_wave_time_ns;
   
-  // --- NEW HARDWARE REGISTERS ---
   bool config_enabled;
-  uint8_t direction_filter; // 0: Both, 1: Approach, 2: Away
-  uint8_t max_distance;     // 10m to 100m
-  uint8_t min_speed;        // 1km/h to 20km/h
-  uint8_t sensitivity;      // 1 to 15
-  // ------------------------------
+  uint8_t direction_filter;
+  uint8_t max_distance;
+  uint8_t min_speed;
+  uint8_t sensitivity;
 
   uint8_t rx_buffer[32];
   uint8_t rx_idx;
@@ -58,74 +61,69 @@ static void on_uart_data(void *user_data, uint8_t byte) {
 // radar data simulation
 static void on_timer(void *user_data) {
   chip_state_t *chip = (chip_state_t *)user_data;
-    // If config mode is enabled, skip radar simulation to allow stable configuration
   if (chip->config_enabled) return;
 
   uint64_t now_ns = get_sim_nanos();
+  int active_count = 0;
 
-  // scanning logic
-  if (!chip->car_active) {
-    if (now_ns > chip->next_event_time_ns) {
-      // Randomly decide if the next car is approaching or receding
-      bool approaching = (rand() % 2 == 0);
+  // wave spawning logic
+  if (now_ns > chip->next_wave_time_ns) {
+    int num_to_spawn = 1 + (rand() % 5); // Random 1, 2, 3, 4, or 5
+    printf("[RADAR] TRAFFIC WAVE: Spawning %d cars...\n", num_to_spawn);
 
-      // hardware filter logic 
-      if (chip->direction_filter != 0) {
-        uint8_t current_dir = approaching ? 1 : 2;
-        if (current_dir != chip->direction_filter) {
-          // filter out car
-          chip->next_event_time_ns = now_ns + 500000000;
-          return; 
-        }
+    for (int i = 0, spawned = 0; i < MAX_TARGETS && spawned < num_to_spawn; i++) {
+      if (!chip->targets[i].active) {
+        chip->targets[i].active = true;
+        // Stagger them slightly so they aren't on top of each other
+        chip->targets[i].distance = (float)chip->max_distance + (spawned * 10.0f); // Start just beyond max distance, staggered by 10m
+        float speed_kmh = (float)(chip->min_speed + (rand() % 80)); // Random speed between min_speed and 80 km/h
+        chip->targets[i].speed_mps = speed_kmh / 3.6f; //Convert to m/s
+        spawned++;
+      }
+    }
+    // Wait 3-10 seconds for the next wave
+    chip->next_wave_time_ns = now_ns + (uint64_t)(3000 + (rand() % 7000)) * 1000000;
+  }
+
+  // data frame construction
+  uint8_t frame[64]; 
+  int idx = 0;
+
+  frame[idx++] = 0xF4; frame[idx++] = 0xF3; frame[idx++] = 0xF2; frame[idx++] = 0xF1;
+  int len_idx = idx; idx += 2; // Placeholder for length
+  int target_count_idx = idx; idx++; 
+  frame[idx++] = 0x01; // Alarm active
+
+  for (int i = 0; i < MAX_TARGETS; i++) {
+    if (chip->targets[i].active) {
+      chip->targets[i].distance -= (chip->targets[i].speed_mps * 0.1f);
+
+      // Car passes or goes out of range
+      if (chip->targets[i].distance <= 1.0f || chip->targets[i].distance > 150.0f) {
+        chip->targets[i].active = false;
+        continue;
       }
 
-      // spawn new car
-      chip->car_active = true;
-      chip->current_dist = 10.0f + (rand() % (chip->max_distance - 10)); //random distance between 10m and max_distance
-      
-      float speed_kmh = (float)(chip->min_speed + (rand() % 80)); // Random speed between min_speed and 80 km/h
-      chip->speed_mps = speed_kmh / 3.6;
-
-      printf("[RADAR] SPAWN: %s Car @ %0.1f km/h (Dist: %dm)\n", 
-              approaching ? "Approaching" : "Receding", speed_kmh, chip->max_distance);
+      // 5-byte target block
+      frame[idx++] = 0x80; // Angle
+      frame[idx++] = (uint8_t)chip->targets[i].distance; //Distance in meters
+      frame[idx++] = 0x01; // Approaching
+      frame[idx++] = (uint8_t)(chip->targets[i].speed_mps * 3.6f); // Convert back to km/h
+      frame[idx++] = (uint8_t)(255 - (chip->targets[i].distance * 2)); // SNR
+      active_count++;
     }
-    return;
   }
 
-  // Update distance based on speed 
-  chip->current_dist -= (chip->speed_mps * 0.1);
-
-  // pass/lost logic
-  if (chip->current_dist <= 1.0 || chip->current_dist > 120.0) {
-    chip->car_active = false;
+  if (active_count > 0) {
+    // Finalize Frame
+    frame[target_count_idx] = (uint8_t)active_count;
+    uint16_t payload_len = (active_count * 5) + 2;
+    frame[len_idx] = payload_len & 0xFF;
+    frame[len_idx+1] = (payload_len >> 8) & 0xFF;
     
-    // sensitivity-based reset delay: 2s base + (sensitivity * 300ms). Higher sensitivity = faster respawn.
-    uint32_t reset_delay_ms = 2000 + (chip->sensitivity * 300);
-    chip->next_event_time_ns = now_ns + (uint64_t)reset_delay_ms * 1000000;
-    
-    printf("[RADAR] LOST: Target out of range. Scanning in %dms...\n", reset_delay_ms);
-    return;
+    frame[idx++] = 0xF8; frame[idx++] = 0xF7; frame[idx++] = 0xF6; frame[idx++] = 0xF5;
+    uart_write(chip->uart, frame, idx);
   }
-
-  // Calculate SNR based on distance and sensitivity (simplified model)
-  uint8_t snr = (uint8_t)(255 - (chip->current_dist * 2));
-  if (snr < 10) snr = 10; // Minimum noise floor
-
-  // Construct radar data frame
-  uint8_t frame[] = {
-    0xF4, 0xF3, 0xF2, 0xF1, // Header
-    0x07, 0x00,             // Payload Length (7 bytes)
-    0x01,                   // Target Count: 1
-    0x01,                   // Alarm: Active
-    0x80,                   // Angle: 0° (128 - 128)
-    (uint8_t)chip->current_dist, 
-    0x01,                   // Direction: 1 (Approaching)
-    (uint8_t)(chip->speed_mps * 3.6), 
-    snr,                    // Calculated SNR
-    0xF8, 0xF7, 0xF6, 0xF5  // Footer
-  };
-
-  uart_write(chip->uart, frame, sizeof(frame));
 }
 
 
@@ -135,7 +133,7 @@ void chip_init(void) {
   const uart_config_t uart_config = {
     .user_data = chip,
     .rx = pin_init("RX", INPUT_PULLUP),
-    .tx = pin_init("TX", OUTPUT), 
+    .tx = pin_init("TX", OUTPUT),
     .baud_rate = 115200,
     .rx_data = on_uart_data,
   };
@@ -143,19 +141,27 @@ void chip_init(void) {
 
   // Default Factory Settings (matches real HLK-LD2451)
   chip->config_enabled = false;
-  chip->direction_filter = 1; // Default: approach only
-  chip->max_distance = 100;   // Default: 100 meters
-  chip->min_speed = 5;        // Default: 5 km/h
-  chip->sensitivity = 5;      // Default: Mid-range
-  
-  chip->car_active = false;
+  chip->direction_filter = 1; // Default: Approaching Only
+  chip->max_distance = 100;
+  chip->min_speed = 5;
+  chip->sensitivity = 5;
   chip->rx_idx = 0;
-  chip->next_event_time_ns = get_sim_nanos() + 1000000000;
+
+  // Ensure all potential car slots start as 'inactive'
+  for (int i = 0; i < MAX_TARGETS; i++) {
+    chip->targets[i].active = false;
+    chip->targets[i].distance = 0;
+    chip->targets[i].speed_mps = 0;
+  }
+
+  chip->next_wave_time_ns = get_sim_nanos() + 1000000000;
   // Start timer for radar simulation
   const timer_config_t timer_config = {
     .user_data = chip,
     .callback = on_timer,
   };
   timer_t timer_id = timer_init(&timer_config);
-  timer_start(timer_id, 100000, true);
+  timer_start(timer_id, 100000, true); 
+
+  printf("[RADAR CHIP] Multi-Target Emulator Online (115200 baud)\n");
 }
