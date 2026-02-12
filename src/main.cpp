@@ -13,6 +13,8 @@ unsigned long lastValidRadarTime = 0;
 const int DATA_PERSIST_MS = 250;
 bool yoloVetoActive = false;
 volatile float lastVetoDistance = 0.0f;
+bool pendingConfigChange = false;
+uint8_t nextRange, nextDir, nextMinSpd, nextSens;
 
 
 unsigned long lastCarSeenTime = 0;
@@ -30,6 +32,27 @@ void setup() {
 }
 
 void loop() {
+  // Check if there's a pending radar configuration change from the web interface
+    if (pendingConfigChange) {
+        Serial.println("[MAIN] Executing Radar Re-config...");
+        
+        // Start Config Sequence
+        uint8_t start[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
+        Serial2.write(start, sizeof(start));
+        delay(150);
+
+        // Set Params (0x0002)
+        uint8_t params[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x06, 0x00, 0x02, 0x00, nextRange, nextDir, nextMinSpd, 0x01, 0x04, 0x03, 0x02, 0x01};
+        Serial2.write(params, sizeof(params));
+        delay(150);
+
+        // End Config Sequence
+        uint8_t end[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
+        Serial2.write(end, sizeof(end));
+
+        pendingConfigChange = false; // Reset the flag
+        Serial.println("[MAIN] Config Sequence Finished.");
+    }
     int count = RadarParser::parse(Serial2, activeTargets, 5);
     bool phoneAttached = network.isConnected();
     bool cameraRecording = safety.isRecording();

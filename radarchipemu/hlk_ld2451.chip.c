@@ -29,33 +29,69 @@ const uint8_t CFG_HEADER[] = {0xFD, 0xFC, 0xFB, 0xFA};
 const uint8_t CFG_FOOTER[] = {0x04, 0x03, 0x02, 0x01};
 
 static void process_command(chip_state_t *chip) {
-  // Byte 6 of the buffer is the command (0xFF = Enable, 0xFE = Disable)
-  uint8_t cmd = chip->rx_buffer[6];
+    // 1. Extract the 16-bit Command Word (Indices 6 and 7)
+    uint16_t cmd = chip->rx_buffer[6] | (chip->rx_buffer[7] << 8);
 
-  if (cmd == 0xFF) {
-    chip->config_enabled = true;
-    printf("[RADAR CHIP] Config Mode: ENABLED\n");
-  } else if (cmd == 0xFE) {
-    chip->config_enabled = false;
-    printf("[RADAR CHIP] Config Mode: DISABLED\n");
-  }
+    // DEBUG: See exactly what's hitting the parser
+    printf("[RADAR] Command Received: 0x%04X (Config State: %s)\n", 
+            cmd, chip->config_enabled ? "OPEN" : "LOCKED");
+
+    // 2. Command Logic Switch
+    switch (cmd) {
+        case 0x00FF: // --- ENABLE CONFIG ---
+            chip->config_enabled = true;
+            printf("[RADAR] Mode -> CONFIG ENABLED\n");
+            break;
+
+        case 0x00FE: // --- DISABLE CONFIG ---
+            chip->config_enabled = false;
+            printf("[RADAR] Mode -> CONFIG CLOSED\n");
+            break;
+
+        case 0x0002: // --- SET DETECTION PARAMS ---
+            if (chip->config_enabled) {
+                // Byte 8: Max Range, Byte 9: Direction, Byte 10: Min Speed
+                chip->max_distance = chip->rx_buffer[8];
+                chip->direction_filter = chip->rx_buffer[9];
+                chip->min_speed = chip->rx_buffer[10];
+                
+                printf("[RADAR] UPDATE -> Range: %dm | Dir: %d | MinSpd: %d\n", 
+                        chip->max_distance, chip->direction_filter, chip->min_speed);
+            } else {
+                printf("[WARNING] Command 0x0002 ignored: Config not enabled!\n");
+            }
+            break;
+
+        case 0x0003: // --- SET SENSITIVITY ---
+            if (chip->config_enabled) {
+                // Byte 8: Sensitivity (1-15)
+                chip->sensitivity = chip->rx_buffer[8];
+                printf("[RADAR] UPDATE -> Sensitivity: %d\n", chip->sensitivity);
+            } else {
+                printf("[WARNING] Command 0x0003 ignored: Config not enabled!\n");
+            }
+            break;
+
+        default:
+            printf("[RADAR] Unknown Command: 0x%04X\n", cmd);
+            break;
+    }
 }
 
 // UART RX callback
 static void on_uart_data(void *user_data, uint8_t byte) {
-  chip_state_t *chip = (chip_state_t *)user_data;
-  
-  if (chip->rx_idx < 32) {
-    chip->rx_buffer[chip->rx_idx++] = byte;
-  }
+    chip_state_t *chip = (chip_state_t *)user_data;
+    if (chip->rx_idx < 32) chip->rx_buffer[chip->rx_idx++] = byte;
 
-  // Check for footer to determine end of command frame
-  if (chip->rx_idx >= 4 && memcmp(&chip->rx_buffer[chip->rx_idx - 4], CFG_FOOTER, 4) == 0) {
-    if (memcmp(chip->rx_buffer, CFG_HEADER, 4) == 0) {
-      process_command(chip);
+    // Check for footer (04 03 02 01)
+    if (chip->rx_idx >= 4 && memcmp(&chip->rx_buffer[chip->rx_idx - 4], CFG_FOOTER, 4) == 0) {
+        // Only process if the header matches
+        if (memcmp(chip->rx_buffer, CFG_HEADER, 4) == 0) {
+            process_command(chip);
+        }
+        // Reset buffer index for next command
+        chip->rx_idx = 0; 
     }
-    chip->rx_idx = 0;
-  }
 }
 
 // radar data simulation

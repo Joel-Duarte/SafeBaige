@@ -9,6 +9,8 @@ extern volatile int globalTargetCount;
 extern bool yoloVetoActive; // Global flag to kill alerts
 extern volatile float lastVetoDistance;
 extern RadarTarget activeTargets[];
+extern bool pendingConfigChange;
+extern uint8_t nextRange, nextDir, nextMinSpd, nextSens;
 
 
 class NetworkManager {
@@ -75,40 +77,17 @@ public:
         });
 
         // Configuration endpoint to set radar parameters (range, direction to track (approaching/receding), sensitivity, min speed)
-        _server.on("/config", HTTP_GET, [this](AsyncWebServerRequest *request){
+        _server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request){
+            // 1. Just harvest the data, do NOT use delay() or Serial2.write() here
+            nextRange  = request->hasParam("range") ? request->getParam("range")->value().toInt() : 100;
+            nextDir    = request->hasParam("direction") ? request->getParam("direction")->value().toInt() : 1;
+            nextMinSpd = request->hasParam("min_speed") ? request->getParam("min_speed")->value().toInt() : 5;
+            nextSens   = request->hasParam("sensitivity") ? request->getParam("sensitivity")->value().toInt() : 5;
             
-            // enable config mode (stop radar data stream, allow config writes)
-            uint8_t enableCfg[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-            sendRadarCommand(enableCfg, sizeof(enableCfg));
-
-            // function 0x0002: Set Tracking Parameters (Max Range, Direction, Min Speed)
-            uint8_t range = request->hasParam("range") ? request->getParam("range")->value().toInt() : 100;
-            uint8_t dir   = request->hasParam("direction") ? request->getParam("direction")->value().toInt() : 1;
-            uint8_t minSpd = request->hasParam("min_speed") ? request->getParam("min_speed")->value().toInt() : 5;
+            // 2. Set the flag for the main loop to handle
+            pendingConfigChange = true; 
             
-            uint8_t setParams[] = {
-                0xFD, 0xFC, 0xFB, 0xFA, 0x06, 0x00, 0x02, 0x00, 
-                range, dir, minSpd, 0x01, // [MaxDist] [Dir] [MinSpeed] [Delay:1s]
-                0x04, 0x03, 0x02, 0x01
-            };
-            sendRadarCommand(setParams, sizeof(setParams));
-
-            // function 0x0003: Set Sensitivity
-            if (request->hasParam("sensitivity")) {
-                uint8_t sens = request->getParam("sensitivity")->value().toInt();
-                uint8_t setSens[] = {
-                    0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0x03, 0x00, 
-                    sens, 0x00, // [Sensitivity] [Reserved]
-                    0x04, 0x03, 0x02, 0x01
-                };
-                sendRadarCommand(setSens, sizeof(setSens));
-            }
-
-            // footer command to end config mode and resume radar data stream
-            uint8_t endCfg[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
-            sendRadarCommand(endCfg, sizeof(endCfg));
-
-            request->send(200, "text/plain", "Full Radar Config Synced");
+            request->send(200, "text/plain", "Config Queued for Main Loop");
         });
 
 
