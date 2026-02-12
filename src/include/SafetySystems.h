@@ -6,7 +6,7 @@
 class SafetySystems {
 private:
     unsigned long _camOffTime = 0;
-    const unsigned long _holdTime = 5000; // 5s recording buffer
+    const unsigned long _holdTime = 1500; // 5s recording buffer
     const uint8_t _triggerDist = 50;      // 50m YOLO Activation Threshold
     bool _isCamOn = false;
 
@@ -20,12 +20,6 @@ public:
         return _isCamOn; 
     }
 
-    /**
-     * @brief Updates safety hardware based on Radar and YOLO feedback
-     * @param carDetected Boolean from RadarParser
-     * @param closestDist Current closest car distance in meters
-     * @param yoloVeto True if Smartphone/YOLO confirmed a False Positive
-     */
     void update(bool carDetected, uint8_t closestDist, bool yoloVeto) {
         
         // Trigger if Radar sees a car within 50m AND YOLO has NOT vetoed it
