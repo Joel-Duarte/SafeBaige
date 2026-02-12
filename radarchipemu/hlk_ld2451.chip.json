@@ -1,0 +1,5 @@
+{
+  "name": "hlk-ld2451",
+  "author": "Joel",
+  "pins": ["VCC", "GND", "RX", "TX"]
+}

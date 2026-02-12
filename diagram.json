@@ -2,7 +2,7 @@
   "version": 1,
   "author": "SafeBaige Team",
   "title": "SafeBaige - mmWave Radar Car Detection",
-  "description": "IoT project for car detection and tracking via mmWave radar and YOLO ML algorithms",
+  "description": "ESP32 receiving LD2451 radar data via Serial2 (pins 25 & 27)",
   "editor": "wokwi",
   "parts": [
     {
@@ -14,20 +14,14 @@
         "name": "ESP32 DevKit V4"
       }
     },
-    {
-      "type": "wokwi-pushbutton",
-      "id": "button1",
-      "top": 100,
-      "left": 250,
-      "attrs": {
-        "label": "Radar Detection"
-      }
-    }
+    { "type": "chip-hlk-ld2451", "id": "radar1", "top": -100, "left": 100 }
   ],
   "connections": [
-    [ "esp32:TX", "$serialMonitor:RX", "", [] ],
-    [ "esp32:RX", "$serialMonitor:TX", "", [] ],
-    [ "esp32:14", "button1:1.l", "green" ],
-    [ "esp32:GND.1", "button1:2.r", "black" ]
+    ["esp32:TX", "$serialMonitor:RX", "", []],
+    ["esp32:RX", "$serialMonitor:TX", "", []],
+    [ "radar1:TX", "esp32:25", "green", [] ],
+    [ "radar1:RX", "esp32:27", "blue", [] ],
+    [ "radar1:GND", "esp32:GND", "black", [] ],
+    [ "radar1:VCC", "esp32:3V3", "red", [] ]
   ]
 }
