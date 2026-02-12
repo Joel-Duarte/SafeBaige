@@ -111,6 +111,22 @@ static void on_timer(void *user_data) {
 
   for (int i = 0; i < MAX_TARGETS; i++) {
     if (chip->targets[i].active) {
+
+      // --- anti collision logic ---
+        // Look for the car immediately in front of this one
+        for (int j = 0; j < MAX_TARGETS; j++) {
+            if (i == j || !chip->targets[j].active) continue;
+
+            float distBetween = chip->targets[i].distance - chip->targets[j].distance;
+            
+            // If car 'j' is in front of car 'i' and closer than 8 meters
+            if (distBetween > 0 && distBetween < 8.0f) {
+                // Brake hard to match the front car's speed
+                if (chip->targets[i].speed_mps > chip->targets[j].speed_mps) {
+                    chip->targets[i].speed_mps = chip->targets[j].speed_mps;
+                }
+            }
+        }
       
       // --- BRAKING LOGIC ---
       // If car is within 30m, simulate driver awareness decelerating to 25 km/h
