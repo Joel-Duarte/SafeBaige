@@ -16,7 +16,6 @@
     },
     { "type": "chip-hlk-ld2451", "id": "radar1", "top": -100, "left": 100 },
     { "type": "wokwi-led", "id": "cam_led", "top": -100, "left": -100, "attrs": { "color": "red", "label": "CAMERA/LIGHT" } },
-    { "type": "wokwi-buzzer", "id": "alert_buzzer", "top": 100, "left": -100, "attrs": { "label": "PROXIMITY ALARM" } },
     { "type": "wokwi-ssd1306", "id": "oled", "top": 100, "left": 200, "attrs": {} }
   ],
   "connections": [
@@ -26,8 +25,6 @@
     [ "radar1:RX", "esp32:27", "blue", [] ],
     [ "esp32:GND", "cam_led:C", "black", [] ],
     [ "esp32:23", "cam_led:A", "red", [] ], 
-    [ "esp32:GND", "alert_buzzer:1", "black", [] ],
-    [ "esp32:18", "alert_buzzer:2", "orange", [] ],
     [ "esp32:GND.3", "oled:GND", "black", [] ],
     [ "esp32:3V3", "oled:VIN", "red", [] ],
     [ "esp32:21", "oled:DATA", "orange", [] ],

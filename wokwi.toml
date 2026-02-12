@@ -7,3 +7,6 @@ firmware = ".pio/build/esp32dev/firmware.bin"
 name = "hlk-ld2451"
 binary = "radarchipemu/hlk_ld2451.chip.wasm"
 sources = ["radarchipemu/hlk_ld2451.chip.c"]
+
+[net]
+gateway="ws://localhost:9011"
