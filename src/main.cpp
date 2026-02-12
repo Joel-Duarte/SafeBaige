@@ -16,6 +16,8 @@ volatile float lastVetoDistance = 0.0f;
 bool pendingConfigChange = false;
 uint8_t nextRange, nextDir, nextMinSpd, nextSens;
 
+TrafficSide currentTrafficSide = RIGHT_HAND_DRIVE;
+
 
 unsigned long lastCarSeenTime = 0;
 const int CLEAR_TIMEOUT = 500;

@@ -28,7 +28,6 @@ public:
      */
     void update(bool carDetected, uint8_t closestDist, bool yoloVeto) {
         
-        // --- 1. ACTIVATION LOGIC ---
         // Trigger if Radar sees a car within 50m AND YOLO has NOT vetoed it
         if (carDetected && closestDist <= _triggerDist && !yoloVeto) {
             _isCamOn = true;
@@ -36,10 +35,6 @@ public:
             digitalWrite(CAM_LIGHT_PIN, HIGH);
         } 
         
-        // --- 2. VETO & SHUTDOWN LOGIC ---
-        // Turn OFF if:
-        // a) YOLO explicitly identifies a False Positive (Veto)
-        // b) The safety hold timer has expired AND no car is in the trigger zone
         bool timeoutExpired = (millis() > _camOffTime);
         bool outOfZone = (!carDetected || closestDist > _triggerDist);
 

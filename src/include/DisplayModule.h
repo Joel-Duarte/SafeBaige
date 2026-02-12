@@ -45,20 +45,32 @@ public:
     void render(int count, RadarTarget *targets, bool phoneConnected, bool isRecording) {
         _display.clearDisplay();
         drawStatusBar(phoneConnected, isRecording);
-        
-        // Road Track & Bike (Top Right)
-        _display.drawLine(115, 64, 115, 11, WHITE); 
-        _display.fillTriangle(112, 10, 118, 10, 115, 5, WHITE); 
+
+        // 1. Position road to the FAR RIGHT
+        int roadX = 120;
+        _display.drawLine(roadX, 64, roadX, 11, WHITE); 
+        _display.fillTriangle(roadX - 3, 10, roadX + 3, 10, roadX, 5, WHITE); 
 
         for (int i = 0; i < count; i++) {
-            // 0m = Top (15), 100m = Bottom (64)
             int yPos = map(targets[i].distance, 0, 100, 15, 64);
-            _display.fillCircle(115, yPos, 3, WHITE); 
             
-            // Proximity Bars on Left
-            int barLen = map(targets[i].distance, 0, 100, 60, 0); 
-            _display.fillRect(5, 15 + (i * 12), barLen, 8, WHITE);
-            _display.setCursor(70, 15 + (i * 12));
+            // 2. Map Angle 128 (Center) to 0 offset. 
+            // Angle 80 (Passing) will map to a negative offset (Left)
+            // We increase the range to -50 to 50 for a wider "lane" feel
+            int xOffset = map(targets[i].angle, 0, 255, -80, 80);
+            
+            if (currentTrafficSide == LEFT_HAND_DRIVE) {
+                xOffset = -xOffset;
+            }
+
+            // Draw Car Dot
+            _display.fillCircle(roadX + xOffset, yPos, 2, WHITE); 
+            
+            // 3. Distance Bars (Shifted slightly right to fit)
+            int barWidth = map(targets[i].distance, 0, 100, 50, 0);
+            _display.fillRect(10, 15 + (i * 12), barWidth, 8, WHITE);
+            
+            _display.setCursor(65, 15 + (i * 12));
             _display.print(targets[i].distance); _display.print("m");
         }
         _display.display();

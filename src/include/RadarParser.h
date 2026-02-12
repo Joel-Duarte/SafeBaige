@@ -23,11 +23,12 @@ public:
 
                 for (int i = 0; i < actualToRead; i++) {
                     int base = 2 + (i * 5);
-                    targets[i].angle = (int8_t)payload[base] - 128;
-                    targets[i].distance = payload[base + 1];
+                    // Index 0: Angle, Index 1: Distance, Index 2: Direction, Index 3: Speed, Index 4: SNR
+                    targets[i].angle    = payload[base];     // 0-255 (128 is center)
+                    targets[i].distance = payload[base + 1]; // 0-100m
                     targets[i].approaching = (payload[base + 2] == 0x01);
-                    targets[i].speed = payload[base + 3];
-                    targets[i].snr = payload[base + 4];
+                    targets[i].speed    = payload[base + 3];
+                    targets[i].snr      = payload[base + 4];
                 }
                 return actualToRead;
             }

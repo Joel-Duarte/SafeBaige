@@ -4,17 +4,17 @@
 #include <Arduino.h>
 
 // Pins
-const int RAD_RX = 25; // Matching main.cpp
-const int RAD_TX = 27; // Matching main.cpp
+const int RAD_RX = 25;
+const int RAD_TX = 27;
 const int CAM_LIGHT_PIN = 23;
 
-// Protocol Constants
-const uint8_t RADAR_HEADER[] = {0xF4, 0xF3, 0xF2, 0xF1};
-const uint8_t RADAR_FOOTER[] = {0xF8, 0xF7, 0xF6, 0xF5};
+// Traffic Side Logic
+enum TrafficSide { LEFT_HAND_DRIVE, RIGHT_HAND_DRIVE };
+extern TrafficSide currentTrafficSide; // Declare it exists globally
 
 struct RadarTarget {
-    int8_t angle;
-    uint8_t distance;
+    uint8_t angle;      // 0-255 (128 is center)
+    uint8_t distance;   // 0-100m
     bool approaching;
     uint8_t speed;
     uint8_t snr;
