@@ -28,9 +28,9 @@
     [ "esp32:23", "cam_led:A", "red", [] ], 
     [ "esp32:GND", "alert_buzzer:1", "black", [] ],
     [ "esp32:18", "alert_buzzer:2", "orange", [] ],
-    [ "esp32:GND", "oled:GND", "black", [ "v0" ]  ],
-    [ "esp32:3V3", "oled:VCC", "red",[ "v0" ]  ],
-    [ "esp32:21", "oled:SDA", "orange",[ "v0" ]  ],
-    [ "esp32:22", "oled:SCL", "yellow",[ "v0" ]  ]
+    [ "esp32:GND.3", "oled:GND", "black", [] ],
+    [ "esp32:3V3", "oled:VIN", "red", [] ],
+    [ "esp32:21", "oled:DATA", "orange", [] ],
+    [ "esp32:22", "oled:CLK", "yellow", [] ]
   ]
 }
