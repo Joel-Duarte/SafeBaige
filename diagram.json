@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "author": "SafeBaige Team",
+  "title": "SafeBaige - mmWave Radar Car Detection",
+  "description": "IoT project for car detection and tracking via mmWave radar and YOLO ML algorithms",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {
+        "name": "ESP32 DevKit V1"
+      }
+    }
+  ],
+  "connections": []
+}
